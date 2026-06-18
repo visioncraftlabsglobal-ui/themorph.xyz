@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Morph — Image to Image AI</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --bg:#f0eeeb;--bg2:#e8e6e2;--surface:#fff;--border:#d4d1cb;
+  --text:#111;--text-muted:#666460;--accent:#ff3c2f;
+  --dot:#c8c5bf;--nav-bg:rgba(240,238,235,0.88);
+  --card-bg:#fff;--tag-bg:#ebebeb;
+}
+[data-theme="dark"] {
+  --bg:#0e0e0e;--bg2:#161616;--surface:#1c1c1c;--border:#2a2a2a;
+  --text:#f0eeeb;--text-muted:#888580;
+  --dot:#222;--nav-bg:rgba(14,14,14,0.88);
+  --card-bg:#1c1c1c;--tag-bg:#252525;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);transition:background .3s,color .3s;overflow-x:hidden}
+img{max-width:100%;display:block}
+button,input,textarea{font-family:inherit}
+
+.dot-grid{background-image:radial-gradient(circle,var(--dot) 1px,transparent 1px);background-size:28px 28px}
+
+/* ───── NAV ───── */
+nav{
+  position:fixed;top:14px;left:50%;transform:translateX(-50%);
+  z-index:1000;width:calc(100% - 32px);max-width:1100px;
+  background:var(--nav-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--border);border-radius:8px;
+  padding:0 18px;height:54px;
+  display:flex;align-items:center;justify-content:space-between;
+  transition:background .3s,border-color .3s;
+}
+.nav-logo{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;letter-spacing:.05em;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:7px}
+.logo-dot{width:8px;height:8px;background:var(--accent);border-radius:50%;display:inline-block;flex-shrink:0}
+.nav-links{display:flex;align-items:center;gap:2px;list-style:none}
+.nav-links a{font-size:13px;font-weight:500;color:var(--text-muted);text-decoration:none;padding:6px 13px;border-radius:6px;transition:background .15s,color .15s;letter-spacing:.02em}
+.nav-links a:hover{background:var(--tag-bg);color:var(--text)}
+.nav-right{display:flex;align-items:center;gap:8px}
+.theme-toggle{width:36px;height:36px;border-radius:6px;border:1px solid var(--border);background:var(--tag-bg);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--text);transition:background .15s;flex-shrink:0}
+.theme-toggle:hover{background:var(--border)}
+.btn-cta{background:var(--text);color:var(--bg);font-size:13px;font-weight:600;padding:8px 16px;border-radius:6px;border:none;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:opacity .15s,transform .1s;letter-spacing:.02em;white-space:nowrap}
+.btn-cta:hover{opacity:.85;transform:translateY(-1px)}
+.hamburger{display:none;width:36px;height:36px;border-radius:6px;border:1px solid var(--border);background:var(--tag-bg);cursor:pointer;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex-shrink:0}
+.hamburger span{width:16px;height:1.5px;background:var(--text);border-radius:2px;transition:all .2s}
+.mobile-menu{
+  display:none;
+  position:fixed;
+  top:78px;
+  left:16px;
+  right:16px;
+  padding:12px;
+  z-index:999;
+  flex-direction:column;
+  gap:4px;
+  background:rgba(255,255,255,0.12);
+  backdrop-filter:blur(18px) saturate(180%);
+  -webkit-backdrop-filter:blur(18px) saturate(180%);
+  border:1px solid rgba(255,255,255,0.22);
+  border-radius:16px;
+  box-shadow:0 12px 40px rgba(0,0,0,.18);
+}
+.mobile-menu.open{display:flex;}
+.mobile-menu a{font-size:14px;font-weight:500;color:var(--text);text-decoration:none;padding:10px 14px;border-radius:10px;transition:background .15s ease,transform .15s ease;}
+.mobile-menu a:hover{background:rgba(255,255,255,0.14);transform:translateX(2px);}
+
+/* ───── HERO ───── */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 20px 60px;position:relative;overflow:hidden;text-align:center}
+.hero-badge{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:rgba(255,60,47,.1);border:1px solid rgba(255,60,47,.25);padding:5px 14px;border-radius:4px;margin-bottom:28px;display:inline-block}
+.hero h1{font-size:clamp(38px,7vw,88px);font-weight:700;line-height:1.0;letter-spacing:-.03em;max-width:860px;margin-bottom:20px}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero-sub{font-family:'Space Mono',monospace;font-size:12px;color:var(--text-muted);max-width:480px;line-height:1.7;margin-bottom:36px;letter-spacing:.01em}
+.hero-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:60px}
+.btn-outline{background:transparent;color:var(--text);font-size:13px;font-weight:500;padding:8px 16px;border-radius:6px;border:1px solid var(--border);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:border-color .15s,background .15s}
+.btn-outline:hover{border-color:var(--text);background:var(--tag-bg)}
+.hero-chips{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+.chip{font-family:'Space Mono',monospace;font-size:10px;padding:4px 11px;border-radius:100px;border:1px solid var(--border);color:var(--text-muted);background:var(--surface);letter-spacing:.05em}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:64px;width:100%;max-width:860px}
+.stat-cell{background:var(--card-bg);padding:24px 16px;text-align:center}
+.stat-num{font-size:clamp(28px,4vw,36px);font-weight:700;letter-spacing:-.04em;line-height:1}
+.stat-num em{font-style:normal;color:var(--accent)}
+.stat-label{font-family:'Space Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:5px;letter-spacing:.05em;text-transform:uppercase}
+
+/* ───── AI INTERFACE SECTION ───── */
+#ai-studio{background:var(--bg2);padding:80px 20px}
+.ai-studio-wrap{max-width:1100px;margin:0 auto}
+.section-eyebrow{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
+.section-title{font-size:clamp(28px,4vw,48px);font-weight:700;letter-spacing:-.025em;line-height:1.1;margin-bottom:14px}
+.section-desc{font-family:'Space Mono',monospace;font-size:12px;color:var(--text-muted);line-height:1.65;max-width:460px;letter-spacing:.01em}
+
+.ai-interface{margin-top:44px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card-bg);box-shadow:0 2px 40px rgba(0,0,0,.07)}
+.ai-topbar{display:flex;align-items:center;gap:8px;padding:12px 18px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.ai-dot{width:10px;height:10px;border-radius:50%}
+.ai-topbar-label{font-family:'Space Mono',monospace;font-size:11px;color:var(--text-muted);margin-left:4px;letter-spacing:.06em}
+.ai-topbar-status{margin-left:auto;display:flex;align-items:center;gap:6px;font-family:'Space Mono',monospace;font-size:10px;color:#22c55e;letter-spacing:.06em}
+.ai-status-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e88;animation:pulse 2s infinite}
+
+.ai-body{display:grid;grid-template-columns:320px 1fr;min-height:560px}
+.ai-sidebar{border-right:1px solid var(--border);padding:20px;display:flex;flex-direction:column;gap:16px;overflow-y:auto}
+.ai-sidebar-section{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.ai-sidebar-header{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);padding:9px 14px;background:var(--bg2);border-bottom:1px solid var(--border)}
+
+/* Upload zone */
+.upload-zone{padding:20px 14px;text-align:center;cursor:pointer;transition:background .15s;position:relative;min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.upload-zone:hover{background:var(--tag-bg)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:28px;line-height:1}
+.upload-text{font-size:12px;color:var(--text-muted);font-family:'Space Mono',monospace;letter-spacing:.02em}
+.upload-hint{font-size:10px;color:var(--text-muted);opacity:.7;font-family:'Space Mono',monospace}
+.upload-preview{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:4px;display:none}
+
+/* Style selector */
+.style-grid{padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.style-btn{padding:8px 6px;border-radius:5px;border:1px solid var(--border);background:var(--tag-bg);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);cursor:pointer;transition:all .15s;text-align:center}
+.style-btn:hover{border-color:var(--accent);color:var(--accent)}
+.style-btn.active{border-color:var(--accent);background:rgba(255,60,47,.08);color:var(--accent)}
+
+/* Sliders */
+.sliders-wrap{padding:14px}
+.slider-row{margin-bottom:14px}
+.slider-row:last-child{margin-bottom:0}
+.slider-label{display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:.04em;margin-bottom:6px}
+.slider-label span{color:var(--accent)}
+input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:3px;border-radius:2px;background:var(--border);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--card-bg);box-shadow:0 0 4px rgba(255,60,47,.4)}
+
+/* Prompt */
+.prompt-wrap{padding:14px}
+.prompt-input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-family:'Space Mono',monospace;font-size:11px;color:var(--text);outline:none;resize:none;height:80px;transition:border-color .15s;line-height:1.5}
+.prompt-input:focus{border-color:var(--accent)}
+.prompt-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.prompt-tag{font-family:'Space Mono',monospace;font-size:9px;padding:3px 8px;border-radius:4px;background:var(--tag-bg);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;transition:all .15s;letter-spacing:.04em}
+.prompt-tag:hover{border-color:var(--accent);color:var(--accent)}
+
+.run-btn{width:100%;background:var(--accent);color:white;border:none;border-radius:6px;padding:12px;font-family:'Space Mono',monospace;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.06em;transition:opacity .15s,transform .1s;display:flex;align-items:center;justify-content:center;gap:8px}
+.run-btn:hover{opacity:.88;transform:translateY(-1px)}
+.run-btn:active{transform:translateY(0)}
+.run-btn svg{width:14px;height:14px;flex-shrink:0}
+
+/* Output panel */
+.ai-output{padding:20px;display:flex;flex-direction:column;gap:14px}
+.output-header{display:flex;align-items:center;justify-content:space-between}
+.output-title{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+.output-actions{display:flex;gap:6px}
+.output-action-btn{font-family:'Space Mono',monospace;font-size:10px;padding:4px 12px;border-radius:4px;border:1px solid var(--border);background:var(--tag-bg);color:var(--text-muted);cursor:pointer;transition:all .15s;letter-spacing:.04em}
+.output-action-btn:hover{border-color:var(--text);color:var(--text)}
+.output-action-btn.primary{background:var(--text);color:var(--bg);border-color:var(--text)}
+.output-action-btn.primary:hover{opacity:.8}
+
+.output-canvas{width:100%;border-radius:8px;border:1px solid var(--border);overflow:hidden;position:relative;background:var(--bg2);aspect-ratio:16/9}
+.output-canvas img{width:100%;height:100%;object-fit:cover;transition:opacity .4s}
+.output-canvas .processing-overlay{position:absolute;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;backdrop-filter:blur(4px)}
+.output-canvas .processing-overlay.active{display:flex}
+.spinner{width:40px;height:40px;border:2px solid rgba(255,255,255,.15);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+.proc-text{font-family:'Space Mono',monospace;font-size:11px;color:rgba(255,255,255,.7);letter-spacing:.1em}
+.proc-bar-wrap{width:160px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+.proc-bar{height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width .1s}
+.output-placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px}
+.output-placeholder-icon{font-size:36px;opacity:.3}
+.output-placeholder-text{font-family:'Space Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:.06em;opacity:.6}
+
+.output-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.meta-chip{font-family:'Space Mono',monospace;font-size:10px;padding:4px 10px;background:var(--tag-bg);border:1px solid var(--border);border-radius:4px;color:var(--text-muted);letter-spacing:.04em}
+.meta-chip.accent{background:rgba(255,60,47,.08);border-color:rgba(255,60,47,.25);color:var(--accent)}
+
+/* Chat history strip */
+.chat-history{border-top:1px solid var(--border);padding:14px 20px;display:flex;gap:10px;overflow-x:auto;scrollbar-width:none}
+.chat-history::-webkit-scrollbar{display:none}
+.history-item{flex-shrink:0;width:72px;cursor:pointer;opacity:.6;transition:opacity .15s}
+.history-item:hover,.history-item.active{opacity:1}
+.history-thumb{width:72px;height:54px;border-radius:5px;overflow:hidden;border:1px solid var(--border);position:relative}
+.history-thumb img{width:100%;height:100%;object-fit:cover}
+.history-thumb .h-label{position:absolute;bottom:0;left:0;right:0;font-family:'Space Mono',monospace;font-size:8px;background:rgba(0,0,0,.55);color:white;padding:2px 4px;letter-spacing:.04em;text-align:center}
+.history-thumb.active-border{border-color:var(--accent)}
+
+/* ───── EXAMPLES (single image cards) ───── */
+#before-after{background:var(--bg);padding:80px 20px}
+.ba-wrap{max-width:1100px;margin:0 auto}
+.ba-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:44px;gap:20px;flex-wrap:wrap}
+.ba-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-bottom:20px}
+.ba-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+
+.img-card{border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--card-bg)}
+.img-card img{width:100%;height:300px;object-fit:cover;display:block;transition:transform .3s}
+.ba-grid-3 .img-card img{height:200px}
+.img-card-footer{padding:16px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.style-tag{font-family:'Space Mono',monospace;font-size:9px;padding:3px 8px;border-radius:4px;background:rgba(255,60,47,.08);border:1px solid rgba(255,60,47,.25);color:var(--accent);letter-spacing:.06em;text-transform:uppercase;display:inline-block;margin-bottom:5px}
+.ba-style-name{font-size:14px;font-weight:600;letter-spacing:-.01em}
+.ba-style-sub{font-family:'Space Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:2px;letter-spacing:.04em}
+
+/* ───── RESPONSIVE ───── */
+
+/* Tablet: 3-col grid drops to 2-col, image heights ease down slightly */
+@media (max-width:900px){
+  #before-after{padding:60px 16px}
+  .img-card img{height:260px}
+  .ba-grid-3{grid-template-columns:repeat(2,1fr)}
+  .ba-grid-3 .img-card img{height:220px}
+}
+
+/* Mobile: both grids collapse to 1 column, header stacks, images use aspect-ratio instead of fixed height */
+@media (max-width:600px){
+  #before-after{padding:48px 14px}
+  .ba-header{flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:32px}
+  .ba-grid,
+  .ba-grid-3{grid-template-columns:1fr;gap:16px}
+  .img-card img,
+  .ba-grid-3 .img-card img{height:auto;aspect-ratio:4/3}
+  .img-card-footer{padding:14px 16px}
+}
+
+/* Small phones: tighten further */
+@media (max-width:360px){
+  .img-card img,
+  .ba-grid-3 .img-card img{aspect-ratio:1/1}
+}
+
+/* ───── REVIEWS ───── */
+#reviews{background:var(--bg);padding:80px 20px 0}
+.reviews-wrap{max-width:1100px;margin:0 auto}
+.reviews-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:36px;gap:16px;flex-wrap:wrap}
+.reviews-scroll-wrapper{overflow-x:auto;padding-bottom:44px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;-webkit-overflow-scrolling:touch;cursor:grab;padding-left:20px;padding-right:20px}
+.reviews-scroll-wrapper:active{cursor:grabbing}
+.reviews-track{display:flex;gap:14px;width:max-content;padding:4px 2px}
+.review-card{width:300px;background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:22px;flex-shrink:0;transition:border-color .2s,transform .2s}
+.review-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.review-stars{display:flex;gap:3px;margin-bottom:12px}
+.star{color:var(--accent);font-size:12px}
+.review-text{font-size:13px;line-height:1.65;color:var(--text);margin-bottom:18px;letter-spacing:-.005em}
+.review-author{display:flex;align-items:center;gap:10px}
+.review-avatar{width:34px;height:34px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:var(--tag-bg);color:var(--text);font-family:'Space Mono',monospace;flex-shrink:0}
+.review-name{font-size:13px;font-weight:600}
+.review-role{font-family:'Space Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:.04em;margin-top:1px}
+.review-verified{font-family:'Space Mono',monospace;font-size:9px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+
+/* ───── PRICING ───── */
+#pricing{background:var(--bg2);padding:80px 20px}
+.pricing-wrap{max-width:1100px;margin:0 auto}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:48px}
+.pricing-card{background:var(--card-bg);padding:32px 26px}
+.pricing-card.featured{background:var(--text);color:var(--bg)}
+.pricing-badge{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;background:var(--accent);color:white;padding:3px 10px;border-radius:4px;display:inline-block;margin-bottom:14px}
+.pricing-name{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:7px}
+.pricing-card.featured .pricing-name{color:rgba(240,238,235,.6)}
+.pricing-price{font-size:44px;font-weight:700;letter-spacing:-.04em;line-height:1;margin-bottom:4px}
+.pricing-price sup{font-size:20px;vertical-align:super;letter-spacing:0}
+.pricing-price span{font-size:14px;font-weight:400;letter-spacing:0;color:var(--text-muted)}
+.pricing-card.featured .pricing-price span{color:rgba(240,238,235,.6)}
+.pricing-desc{font-family:'Space Mono',monospace;font-size:11px;color:var(--text-muted);margin-bottom:24px;line-height:1.5;letter-spacing:.01em}
+.pricing-card.featured .pricing-desc{color:rgba(240,238,235,.6)}
+.pricing-features{list-style:none;margin-bottom:24px}
+.pricing-feature{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--text-muted);padding:6px 0;border-bottom:1px solid var(--border)}
+.pricing-card.featured .pricing-feature{color:rgba(240,238,235,.75);border-bottom-color:rgba(240,238,235,.1)}
+.pricing-check{color:var(--accent);font-size:13px;flex-shrink:0}
+.btn-pricing{width:100%;background:var(--bg2);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;padding:11px;border-radius:6px;border:1px solid var(--border);cursor:pointer;text-align:center;text-decoration:none;display:block;transition:opacity .15s,transform .1s;letter-spacing:.02em}
+.btn-pricing:hover{opacity:.8;transform:translateY(-1px)}
+.pricing-card.featured .btn-pricing{background:var(--accent);color:white;border-color:var(--accent)}
+
+/* ───── PRIVACY ───── */
+#privacy{background:var(--bg);padding:80px 20px}
+.privacy-wrap{max-width:1100px;margin:0 auto}
+.privacy-grid{display:grid;grid-template-columns:200px 1fr;gap:56px;margin-top:48px}
+.privacy-nav{position:sticky;top:82px}
+.privacy-nav-item{display:block;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);text-decoration:none;padding:9px 0;border-bottom:1px solid var(--border);transition:color .15s}
+.privacy-nav-item:hover,.privacy-nav-item.active{color:var(--accent)}
+.privacy-nav-item:first-child{border-top:1px solid var(--border)}
+.privacy-content h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:12px;margin-top:36px}
+.privacy-content h2:first-child{margin-top:0}
+.privacy-content p{font-family:'Space Mono',monospace;font-size:12px;line-height:1.75;color:var(--text-muted);margin-bottom:12px;letter-spacing:.01em}
+
+/* ───── FOOTER ───── */
+footer{background:var(--bg2);border-top:1px solid var(--border);padding:56px 20px 32px}
+.footer-inner{max-width:1100px;margin:0 auto}
+.footer-top{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:48px}
+.footer-brand p{font-family:'Space Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.7;letter-spacing:.02em;max-width:240px;margin-top:12px}
+.footer-socials{display:flex;gap:10px;margin-top:18px}
+.footer-social{width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:var(--tag-bg);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text-muted);text-decoration:none;transition:all .15s}
+.footer-social:hover{border-color:var(--accent);color:var(--accent)}
+.footer-col h4{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px}
+.footer-col a{display:block;font-size:13px;color:var(--text);text-decoration:none;padding:4px 0;transition:color .15s}
+.footer-col a:hover{color:var(--accent)}
+.footer-bottom{border-top:1px solid var(--border);padding-top:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.footer-legal{font-family:'Space Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:.02em}
+.footer-status{display:flex;align-items:center;gap:6px;font-family:'Space Mono',monospace;font-size:11px;color:var(--text-muted)}
+.status-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e88;animation:pulse 2s infinite}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.fade-in{animation:fadeIn .4s ease forwards}
+
+/* ───── RESPONSIVE ───── */
+@media(max-width:1024px){
+  .ai-body{grid-template-columns:260px 1fr}
+  .ba-grid-3{grid-template-columns:repeat(2,1fr)}
+  .footer-top{grid-template-columns:1fr 1fr;gap:32px}
+}
+@media(max-width:768px){
+  .nav-links{display:none}
+  .hamburger{display:flex}
+  .hero h1{font-size:clamp(32px,9vw,56px)}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .ai-body{grid-template-columns:1fr;min-height:auto}
+  .ai-sidebar{border-right:none;border-bottom:1px solid var(--border);max-height:none}
+  .style-grid{grid-template-columns:repeat(3,1fr)}
+  .ba-grid{grid-template-columns:1fr}
+  .ba-grid-3{grid-template-columns:1fr}
+  .ba-grid-3 .img-card img{height:220px}
+  .pricing-grid{grid-template-columns:1fr}
+  .privacy-grid{grid-template-columns:1fr}
+  .privacy-nav{position:static;display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px}
+  .privacy-nav-item{padding:6px 10px;border:1px solid var(--border);border-radius:5px;font-size:10px}
+  .privacy-nav-item:first-child{border-top:1px solid var(--border)}
+  .footer-top{grid-template-columns:1fr 1fr}
+  .img-card img{height:240px}
+  .btn-cta span{display:none}
+}
+@media(max-width:480px){
+  nav{width:calc(100% - 20px);padding:0 14px}
+  .hero{padding:90px 16px 50px}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .hero-chips{gap:5px}
+  .chip{font-size:9px;padding:3px 8px}
+  .footer-top{grid-template-columns:1fr}
+  .reviews-scroll-wrapper{padding-left:16px;padding-right:16px}
+  .review-card{width:270px}
+  section,#ai-studio,#before-after,#reviews,#pricing,#privacy{padding-left:16px;padding-right:16px}
+}
+</style>
+</head>
+<body data-theme="light" class="dot-grid">
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo"><span class="logo-dot"></span>MORPH</a>
+  <ul class="nav-links">
+    <li><a href="#ai-studio">Studio</a></li>
+    <li><a href="#before-after">Examples</a></li>
+    <li><a href="#reviews">Reviews</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#privacy">Privacy</a></li>
+  </ul>
+  <div class="nav-right">
+    <button class="theme-toggle" id="themeToggle" title="Toggle theme">◐</button>
+    <a href="#ai-studio" class="btn-cta">Try<span>→</span></a>
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#ai-studio" onclick="closeMenu()">AI Studio</a>
+  <a href="#before-after" onclick="closeMenu()">Examples</a>
+  <a href="#reviews" onclick="closeMenu()">Reviews</a>
+  <a href="#pricing" onclick="closeMenu()">Pricing</a>
+  <a href="#privacy" onclick="closeMenu()">Privacy</a>
+  <a href="#Refund_policy" onclick="closeMenu()">Refund Policy</a>
+</div>
+
+<!-- HERO -->
+<section class="hero" id="home">
+  <div class="hero-badge">Image · AI · Transformation</div>
+  <h1>Transform any image<br/>into <em>spicy.</em></h1>
+  <p class="hero-sub">Turn your spicy idea into a image [Image-to-Image].<br/>Upload, prompt, transform. In seconds.</p>
+  <div class="hero-actions">
+    <a href="#ai-studio" class="btn-cta">Open Studio →</a>
+    <a href="#before-after" class="btn-outline">See examples</a>
+  </div>
+  <div class="hero-chips">
+    <span class="chip">STYLE TRANSFER</span>
+    <span class="chip">Spicy Mode</span>
+    <span class="chip">NSFW</span>
+    <span class="chip">Sexualize image [SI]</span>
+  </div>
+  <div class="stats-row">
+    <div class="stat-cell"><div class="stat-num">6.<em>4</em>K</div><div class="stat-label">Generated</div></div>
+    <div class="stat-cell"><div class="stat-num"><em>96</em>%</div><div class="stat-label">Satisfaction</div></div>
+    <div class="stat-cell"><div class="stat-num">3.<em>2</em>s</div><div class="stat-label">Avg speed</div></div>
+    <div class="stat-cell"><div class="stat-num"><em>40</em>+</div><div class="stat-label">Presets</div></div>
+  </div>
+</section>
+
+<!-- ── AI STUDIO INTERFACE ── -->
+<section id="ai-studio">
+  <div class="ai-studio-wrap">
+    <div class="section-eyebrow">AI Studio</div>
+    <h2 class="section-title">Transform right here.</h2>
+    <p class="section-desc">Upload an image, choose a style, describe your vision — and watch Morph work.</p>
+
+    <div class="ai-interface">
+      <div class="ai-topbar">
+        <div class="ai-dot" style="background:#ff5f57"></div>
+        <div class="ai-dot" style="background:#febc2e"></div>
+        <div class="ai-dot" style="background:#28c840"></div>
+        <span class="ai-topbar-label">MORPH STUDIO — v2.4.1</span>
+        <div class="ai-topbar-status">
+          <div class="ai-status-dot"></div>MODEL READY
+        </div>
+      </div>
+
+      <div class="ai-body">
+        <!-- SIDEBAR -->
+        <div class="ai-sidebar">
+          <div class="ai-sidebar-section">
+            <div class="ai-sidebar-header">01 — SOURCE IMAGE</div>
+            <div class="upload-zone" id="uploadZone">
+              <input type="file" id="fileInput" accept="image/*" onchange="handleUpload(event)"/>
+              <img id="uploadPreview" class="upload-preview" alt="preview"/>
+              <div id="uploadPlaceholder">
+                <div class="upload-icon">⬆</div>
+                <div class="upload-text">Drop image or click to upload</div>
+                <div class="upload-hint">PNG, JPG, WEBP · max 10MB</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ai-sidebar-section">
+            <div class="ai-sidebar-header">02 — STYLE PRESET</div>
+            <div class="style-grid">
+              <button class="style-btn active" onclick="selectStyle(this,'Spicy')">Spicy</button>
+              <button class="style-btn" onclick="selectStyle(this,'Nude [L]')">Nude [L]</button>
+              <button class="style-btn" onclick="selectStyle(this,'Nude [M]')">Nude [M]</button>
+              <button class="style-btn" onclick="selectStyle(this,'Anime')">Anime</button>
+              <button class="style-btn" onclick="selectStyle(this,'Cloth')">Cloth</button>
+              <button class="style-btn" onclick="selectStyle(this,'SI Mode')">SI Mode</button>
+            </div>
+          </div>
+
+          <div class="ai-sidebar-section">
+            <div class="ai-sidebar-header">03 — PARAMETERS</div>
+            <div class="sliders-wrap">
+              <div class="slider-row">
+                <div class="slider-label">Style Strength <span id="strengthVal">75</span>%</div>
+                <input type="range" min="0" max="100" value="75" oninput="document.getElementById('strengthVal').textContent=this.value"/>
+              </div>
+              <div class="slider-row">
+                <div class="slider-label">Creativity <span id="creativityVal">60</span>%</div>
+                <input type="range" min="0" max="100" value="60" oninput="document.getElementById('creativityVal').textContent=this.value"/>
+              </div>
+              <div class="slider-row">
+                <div class="slider-label">Detail Level <span id="detailVal">80</span>%</div>
+                <input type="range" min="0" max="100" value="80" oninput="document.getElementById('detailVal').textContent=this.value"/>
+              </div>
+            </div>
+          </div>
+
+          <div class="ai-sidebar-section">
+            <div class="ai-sidebar-header">04 — PROMPT</div>
+            <div class="prompt-wrap">
+              <textarea class="prompt-input" id="promptInput" placeholder="Describe your transformation…">Make this image spicy</textarea>
+              <div class="prompt-tags">
+                <span class="prompt-tag" onclick="addTag('Sexualize')">+ Sexualize</span>
+                <span class="prompt-tag" onclick="addTag('cinematic')">+ cinematic</span>
+                <span class="prompt-tag" onclick="addTag('hyperrealistic')">+ hyperrealistic</span>
+                <span class="prompt-tag" onclick="addTag('8K detail')">+ 8K detail</span>
+              </div>
+            </div>
+          </div>
+
+          <button class="run-btn" onclick="runTransform()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            TRANSFORM
+          </button>
+        </div>
+
+        <!-- OUTPUT -->
+        <div class="ai-output">
+          <div class="output-header">
+            <span class="output-title">Output</span>
+            <div class="output-actions">
+              <button class="output-action-btn" onclick="copyResult()">Copy</button>
+              <button class="output-action-btn" onclick="shareResult()">Share</button>
+              <button class="output-action-btn primary" onclick="downloadResult()">↓ Save</button>
+            </div>
+          </div>
+
+          <div class="output-canvas" id="outputCanvas">
+            <div class="output-placeholder" id="outputPlaceholder">
+              <div class="output-placeholder-icon">🖼</div>
+              <div class="output-placeholder-text">RESULT WILL APPEAR HERE</div>
+            </div>
+            <img id="outputImg" src="" alt="output" style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0"/>
+            <div class="processing-overlay" id="procOverlay">
+              <div class="spinner"></div>
+              <div class="proc-text" id="procText">ANALYZING IMAGE...</div>
+              <div class="proc-bar-wrap"><div class="proc-bar" id="procBar"></div></div>
+            </div>
+          </div>
+
+          <div class="output-meta" id="outputMeta" style="display:none">
+            <span class="meta-chip" id="metaRes">1024×768</span>
+            <span class="meta-chip">PNG</span>
+            <span class="meta-chip accent" id="metaTime">—</span>
+            <span class="meta-chip" id="metaStyle">Sexualize</span>
+          </div>
+
+          <div class="chat-history" id="historyStrip" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── EXAMPLES (single image cards) ── -->
+<section id="before-after">
+  <div class="ba-wrap">
+    <div class="ba-header">
+      <div>
+        <div class="section-eyebrow">Examples</div>
+        <h2 class="section-title">Real transformations.</h2>
+      </div>
+      <p class="section-desc" style="max-width:320px">Every result below was made with Morph — upload your image and pick a style to get started.</p>
+    </div>
+
+    <!-- Row 2: 3 smaller cards -->
+    <div class="ba-grid-3">
+      <div class="img-card">
+        <img src="https://lh3.googleusercontent.com/d/15MTICJ9LMlujGL_wQMPRhEUTN8fCiel_" alt="Oil painting landscape"/>
+        <div class="img-card-footer">
+          <div>
+            <div class="style-tag">Nude [M]</div>
+            <div class="ba-style-name">Nude [M]</div>
+            <div class="ba-style-sub">Turn any image into nude</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="img-card">
+        <img src="https://lh3.googleusercontent.com/d/1YsaqJiQ9OO6ecPzWDeYf4dBpTghUVynd" alt="Watercolor product"/>
+        <div class="img-card-footer">
+          <div>
+            <div class="style-tag">Nude [L]</div>
+            <div class="ba-style-name">Nude [L]</div>
+            <div class="ba-style-sub">Make your image Nude [L]</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="img-card">
+        <img src="https://lh3.googleusercontent.com/d/13-MRyrj7-HYKaxHRTI5gAjAwWysWc0Km" alt="Pencil sketch forest"/>
+        <div class="img-card-footer">
+          <div>
+            <div class="style-tag">Spicy</div>
+            <div class="ba-style-name">Spicy</div>
+            <div class="ba-style-sub">Realistic Spicy image</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REVIEWS -->
+<section id="reviews">
+  <div class="reviews-wrap">
+    <div class="reviews-header">
+      <div><div class="section-eyebrow">Reviews</div><h2 class="section-title">Loved by creators.</h2></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:26px;font-weight:700;letter-spacing:-.04em">4.9</span>
+        <div><div style="display:flex;gap:3px"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div><div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:3px;letter-spacing:.04em">1,240 REVIEWS</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="reviews-scroll-wrapper" id="reviewsScroll">
+    <div class="reviews-track">
+      <div class="review-card"><div class="review-stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div><p class="review-text">"Morph is the best for NSFW, better than any website in the internet"</p><div class="review-author"><div class="review-avatar">RS</div><div><div class="review-name">Rahul Sharma</div><div class="review-role">USER · INDIA</div></div></div><div class="review-verified">✓ VERIFIED PURCHASE</div></div>
+      <div class="review-card"><div class="review-stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div><p class="review-text">"The best thing about Morph is its uncensored, you can create anything"</p><div class="review-author"><div class="review-avatar">J</div><div><div class="review-name">James</div><div class="review-role">USER · INDIA</div></div></div><div class="review-verified">✓ VERIFIED PURCHASE</div></div>
+      <div class="review-card"><div class="review-stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div><p class="review-text">"I've tried every img2img tool. Morph is the only one that actually gives Realistic NSFW images. Definitely worth the price"</p><div class="review-author"><div class="review-avatar">AM</div><div><div class="review-name">Arjun Mayya</div><div class="review-role">USER · INDIA</div></div></div><div class="review-verified">✓ VERIFIED PURCHASE</div></div>
+      <div class="review-card"><div class="review-stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div><p class="review-text">"The best about morph is you dont have to sign-in and the  image is not getting stored so i have complete privacy"</p><div class="review-author"><div class="review-avatar">A</div><div><div class="review-name">Adhul</div><div class="review-role">USER · INDIA</div></div></div><div class="review-verified">✓ VERIFIED PURCHASE</div></div>
+      <div class="review-card"><div class="review-stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div><p class="review-text">"The resulting images are amazing, that's genuinely impressive."</p><div class="review-author"><div class="review-avatar">K</div><div><div class="review-name">Karthik</div><div class="review-role">USER · KARNATAKA, INDIA</div></div></div><div class="review-verified">✓ VERIFIED PURCHASE</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="pricing-wrap">
+    <div class="section-eyebrow">Pricing</div>
+    <h2 class="section-title">Simple. Transparent. Fair.</h2>
+    <p class="section-desc">No credits that expire. No hidden costs. Pay monthly, cancel any time.</p>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="pricing-name">Starter</div>
+        <div class="pricing-price"><sup>₹</sup>19<span>/mo</span></div>
+        <p class="pricing-desc">For individuals exploring Morph.</p>
+        <ul class="pricing-features">
+          <li class="pricing-feature"><span class="pricing-check">✓</span> 5 transforms / month</li>
+          <li class="pricing-feature"><span class="pricing-check">✓</span> 5 style presets</li>
+          <li class="pricing-feature"><span class="pricing-check">✓</span> 512px max output</li>
+          <li class="pricing-feature"><span class="pricing-check">✓</span> Web interface</li>
+        </ul>
+        <a href="#" class="btn-pricing">Get started</a>
+      </div>
+      <div class="pricing-card featured">
+        <div class="pricing-badge">MOST POPULAR</div>
+        <div class="pricing-name">Pro</div>
+        <div class="pricing-price"><sup>₹</sup>24<span>/mo</span></div>
+        <p class="pricing-desc">For individuals exploring Morph. who need speed, quality, and volume.</p>
+        <ul class="pricing-features">
+          <li class="pricing-feature"><span class="pricing-check">✓</span> 15 transforms / month</li>
+          <li class="pricing-feature"><span class="pricing-check">✓</span> All 40+ style presets</li>
+          <li class="pricing-feature"><span class="pricing-check">✓</span> 4096px max output</li>
+          <li class="pricing-feature"><span class="pricing-check">✓</span> All Spicy modes</li>
+        </ul>
+        <a href="#" class="btn-pricing">Start Pro</a>
+      </div>
+      <div class="pricing-card">
+        <div class="pricing-name">Studio</div>
+        <div class="pricing-price"><sup>₹</sup>49<span>/mo</span></div>
+        <p class="pricing-desc">For individuals exploring Morph. With lot of fun.</p>
+        <ul class="pricing-features">
+          <li class="pricing-feature"><span class="pricing-check">✓</span> 25 transforms / month</li>
+          <li class="pricing-feature"><span class="pricing-check">✓</span> All Pro features</li>
+          <li class="pricing-feature"><span class="pricing-check">✓</span> Custom model fine-tuning</li>
+          <li class="pricing-feature"><span class="pricing-check">✓</span> All Spicy and nude modes</li>
+        </ul>
+        <a href="#" class="btn-pricing">Start Ultra</a>
+      </div>
+    </div>
+    <br>
+    <div><a style="color: rgb(69, 69, 69);size: 6px;" href="#Refund_policy">Refund policy</a></div>
+  </div>
+</section>
+
+<!-- PRIVACY -->
+<section id="privacy">
+  <div class="privacy-wrap">
+    <div class="section-eyebrow">Privacy</div>
+    <h2 class="section-title">Your images. Only yours.</h2>
+    <p class="section-desc">We process to transform, then we're done. That's the full policy in one line.</p>
+    <div class="privacy-grid">
+      <div class="privacy-content">
+        <h2>Zero retention policy</h2>
+        <p>Every image you upload is processed in an isolated, ephemeral container. Once your transformation completes, both the source and output are permanently deleted. We never store, log, or cache your image data beyond a single request.</p>
+        <h2>How processing works</h2>
+        <p>Your image travels over TLS 1.3 to our processing nodes. The transformation runs in memory inside a sandboxed environment with no persistent disk access. The result is streamed directly back to your browser or API client. No intermediate files, no pixel logging.</p>
+        <h2>Third-party subprocessors</h2>
+        <p>We use a small number of subprocessors for infrastructure. None of them receive your image data — processing happens entirely within our own controlled infrastructure. Our subprocessor list is published and updated in real time.</p>
+        <h2>Your rights</h2>
+        <p>Because we don't retain personal data beyond the session, there is nothing to request deletion of — it's already gone. For account data, you can export or delete everything from Settings at any time.</p>
+        <h2>Security</h2>
+        <p>Our infrastructure undergoes quarterly third-party penetration testing. We maintain SOC 2 Type II certification. Our architecture makes it technically impossible for anyone to view your images after the request completes.</p>
+        <h2 id="Refund_policy">Refund Policy</h2>
+        <p>At Morph [VisionCraftLabs Global], we strive to provide the best possible service to our customers.</p>
+        <p>If you request a refund for reasons other than service-related issues, only 50% of the amount paid will be refunded, as the remaining amount covers processing and operational costs.</p>
+        <p>If you encounter any issues with our service or do not receive the service you purchased, please contact us. We will investigate the matter and, if the issue is verified, we will work to provide an appropriate solution, which may include a partial or full refund.</p>
+        <p>For any refund requests or support inquiries, please contact us at <a style="color: red;" href="mailto:visioncraftlabsglobal@gmail.com">visioncraftlabsglobal@gmail.com</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a href="#" class="nav-logo"><span class="logo-dot"></span>MORPH</a>
+        <p>Professional image-to-image AI.<br/>Transform anything into spicy. Keep your privacy.</p>
+      </div>
+      <div class="footer-col"><h4>Product</h4><a href="#ai-studio">AI Studio</a><a href="#before-after">Examples</a><a href="#pricing">Pricing</a></div>
+      <div class="footer-col"><h4>Legal</h4><a href="#privacy">Privacy Policy</a><a href="#Refund_policy">Refund Policy</a></div>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-legal">© 2026 Morph [VisionCraftLabs Global]. All rights reserved.</span>
+      <div class="footer-status"><div class="status-dot"></div>ALL SYSTEMS OPERATIONAL</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ── THEME ──
+const themeToggle = document.getElementById('themeToggle');
+let dark = false;
+themeToggle.addEventListener('click', () => {
+  dark = !dark;
+  document.body.setAttribute('data-theme', dark ? 'dark' : 'light');
+  themeToggle.textContent = dark ? '○' : '◐';
+});
+
+// ── MOBILE MENU ──
+const hamburger = document.getElementById('hamburger');
+const mobileMenu = document.getElementById('mobileMenu');
+hamburger.addEventListener('click', () => mobileMenu.classList.toggle('open'));
+function closeMenu(){ mobileMenu.classList.remove('open'); }
+document.addEventListener('click', e => {
+  if(!hamburger.contains(e.target) && !mobileMenu.contains(e.target)) mobileMenu.classList.remove('open');
+});
+
+// ── UPLOAD ──
+function handleUpload(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const prev = document.getElementById('uploadPreview');
+    const ph = document.getElementById('uploadPlaceholder');
+    prev.src = ev.target.result;
+    prev.style.display = 'block';
+    ph.style.display = 'none';
+    window._uploadedSrc = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── STYLE SELECT ──
+let currentStyle = 'Spicy';
+const stylePrompts = {
+  'Spicy':'make this image spicy, sensual, vivid lighting, cinematic',
+  'Nude [L]':'nude, tasteful, artistic, soft lighting',
+  'Nude [M]':'nude, moderate exposure, artistic photography style',
+  'Anime':'studio ghibli anime style, soft colors, illustrated, beautiful',
+  'Cloth':'stylish clothing transformation, fashion editorial, high quality',
+  'SI Mode':'sexualize image, explicit style transfer, hyperrealistic'
+};
+const styleOutputImages = {
+  'Spicy':'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=900&q=80&auto=format&fit=crop',
+  'Nude [L]':'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=900&q=80&auto=format&fit=crop',
+  'Nude [M]':'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=700&q=80&auto=format&fit=crop',
+  'Anime':'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=900&q=80&auto=format&fit=crop',
+  'Cloth':'https://images.unsplash.com/photo-1481437156560-3205f6a55735?w=700&q=80&auto=format&fit=crop',
+  'SI Mode':'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=700&q=80&auto=format&fit=crop'
+};
+
+function selectStyle(btn, style){
+  document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentStyle = style;
+  document.getElementById('promptInput').value = stylePrompts[style] || '';
+}
+function addTag(tag){
+  const inp = document.getElementById('promptInput');
+  const v = inp.value.trim();
+  inp.value = v ? v + ', ' + tag : tag;
+}
+
+// ── TRANSFORM ──
+let historyCount = 0;
+function runTransform(){
+  const overlay = document.getElementById('procOverlay');
+  const bar = document.getElementById('procBar');
+  const procText = document.getElementById('procText');
+  const outputImg = document.getElementById('outputImg');
+  const placeholder = document.getElementById('outputPlaceholder');
+  const meta = document.getElementById('outputMeta');
+  const historyStrip = document.getElementById('historyStrip');
+
+  placeholder.style.display = 'none';
+  outputImg.style.display = 'none';
+  overlay.classList.add('active');
+
+  const steps = ['ANALYZING IMAGE...','APPLYING STYLE...','ENHANCING DETAILS...','FINALIZING...'];
+  let step = 0, progress = 0;
+  const stepInterval = setInterval(() => { procText.textContent = steps[Math.min(step, steps.length-1)]; step++; }, 500);
+  const barInterval = setInterval(() => {
+    progress += (Math.random() * 4);
+    if(progress > 95) progress = 95;
+    bar.style.width = progress + '%';
+  }, 60);
+
+  const t0 = Date.now();
+  setTimeout(() => {
+    clearInterval(stepInterval); clearInterval(barInterval);
+    bar.style.width = '100%';
+    setTimeout(() => {
+      overlay.classList.remove('active');
+      bar.style.width = '0%';
+      const resultSrc = styleOutputImages[currentStyle] || styleOutputImages['Spicy'];
+      outputImg.src = resultSrc;
+      outputImg.style.display = 'block';
+      outputImg.classList.add('fade-in');
+      const elapsed = ((Date.now() - t0) / 1000).toFixed(1) + 's';
+      document.getElementById('metaTime').textContent = elapsed;
+      document.getElementById('metaStyle').textContent = currentStyle.toUpperCase();
+      meta.style.display = 'flex';
+      historyStrip.style.display = 'flex';
+      historyCount++;
+      const item = document.createElement('div');
+      item.className = 'history-item active';
+      item.innerHTML = `<div class="history-thumb active-border"><img src="${resultSrc}" alt="result"/><div class="h-label">${currentStyle.toUpperCase()}</div></div>`;
+      historyStrip.insertBefore(item, historyStrip.firstChild);
+      document.querySelectorAll('.history-item').forEach((it, i) => {
+        if(i > 0) it.classList.remove('active');
+        it.querySelector('.history-thumb').classList.toggle('active-border', i === 0);
+      });
+    }, 200);
+  }, 2400);
+}
+
+function downloadResult(){
+  const img = document.getElementById('outputImg');
+  if(!img.src || img.style.display === 'none'){ alert('Run a transformation first!'); return; }
+  const a = document.createElement('a');
+  a.href = img.src; a.download = 'morph-result.jpg'; a.click();
+}
+function copyResult(){ navigator.clipboard?.writeText(window.location.href); }
+function shareResult(){ if(navigator.share) navigator.share({title:'Morph Result', url:window.location.href}); }
+
+// ── APPLY STYLE FROM EXAMPLES ──
+function applyBAStyle(style){
+  document.getElementById('ai-studio').scrollIntoView({behavior:'smooth'});
+  setTimeout(() => {
+    const map = {cyberpunk:'Spicy', anime:'Anime', oil:'Cloth', watercolor:'Cloth', sketch:'SI Mode'};
+    const targetStyle = map[style] || 'Spicy';
+    document.querySelectorAll('.style-btn').forEach(b => {
+      if(b.textContent === targetStyle){ b.click(); }
+    });
+  }, 600);
+}
+
+// ── REVIEWS DRAG ──
+const scroll = document.getElementById('reviewsScroll');
+let isDown = false, startX, scrollLeft;
+scroll.addEventListener('mousedown', e => { isDown = true; startX = e.pageX - scroll.offsetLeft; scrollLeft = scroll.scrollLeft; });
+window.addEventListener('mouseleave', () => isDown = false);
+window.addEventListener('mouseup', () => isDown = false);
+scroll.addEventListener('mousemove', e => {
+  if(!isDown) return;
+  e.preventDefault();
+  scroll.scrollLeft = scrollLeft - (e.pageX - scroll.offsetLeft - startX) * 1.5;
+});
+</script>
+</body>
+</html>
